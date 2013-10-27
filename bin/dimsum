@@ -1,0 +1,80 @@
+#!/usr/bin/env node
+
+// Dependencies
+var dimsum = require("../dimsum"),
+	cmdr = require("commander"),
+	fs = require("fs"),
+	path = require("path");
+
+// Retrieve package info to keep things DRY...
+var pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf-8"));
+
+// Version and options
+cmdr.version(pkg.version)
+	.option('-w, --words', "Output words.")
+	.option('-s, --sentences', "Output sentences.")
+	.option('-p, --paragraphs', "Output paragraphs. [Default]")
+	.option('-f, --format <type>', "The output format, text (default) or html.")
+	.option('-x, --flavor <type>', "The output flavor.");
+
+function configure() {
+	var pick = [ "format", "flavor" ],
+		config = {};
+
+	pick.forEach(function(c) {
+		var val = cmdr[c];
+		if (val != null) config[c] = val;
+	});
+
+	dimsum.configure(config);
+}
+
+function type() {
+	var pick = [ "paragraphs", "sentences", "words" ];
+
+	for (var i in pick) {
+		var val = pick[i];
+		if (cmdr[val] != null) return val;
+	}
+
+	return pick[0];
+}
+
+// output available flavors
+cmdr.command("flavors")
+	.description('Outputs available flavors.')
+	.action(function() {
+		dimsum.flavors().forEach(function(f, i, l) {
+			if (dimsum.config().flavor === f) f += " [default]"
+			console.log(f)
+		});
+		process.exit(0);
+	});
+
+// Parse and go
+cmdr.parse(process.argv);
+configure();
+
+var t = type()
+	num = cmdr.args[0];
+
+num = parseInt(num, 10);
+if (isNaN(num)) num = 1;
+
+switch (t) {
+	case "paragraphs":
+		console.log(dimsum(num));
+		break;
+
+	case "sentences":
+		var sen = [];
+		for (var i = 0; i < num; i++) {
+			sen.push(dimsum.sentence());
+		}
+
+		console.log(sen.join(" "));
+		break;
+
+	case "words":
+		console.log(dimsum.words(num));
+}
